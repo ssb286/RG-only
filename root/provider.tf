@@ -9,7 +9,7 @@ terraform {
   backend "azurerm" {
     resource_group_name  = "RG-Storage"
     storage_account_name = "sarvstorageforbackend"
-    container_name       = "statefilestorage"
+    container_name       = "stor"
     key                  = "test.terraform.tfstate"
   }
 }

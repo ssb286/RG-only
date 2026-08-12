@@ -3,10 +3,6 @@ rg = {
     name     = "rg1"
     location = "centralindia"
   }
-  rg2 = {
-    name     = "rg2"
-    location = "centralindia"
-  }
 }
 
 vnet = {
@@ -27,5 +23,103 @@ subnet = {
   }
 }
 
+pip = {
+  pip1 = {
+    name                = "pip1"
+    resource_group_name = "rg1"
+    location            = "centralindia"
+  }
+}
 
+nic = {
+  nic1 = {
+    name                 = "nic1"
+    location             = "centralindia"
+    resource_group_name  = "rg1"
+    nameipconfig         = "pip-ka-ipconfig"
+    virtual_network_name = "vnet1"
+    subnet-ka-data-block = "subnet1"
+  }
+  nic2 = {
+    name                 = "nic2"
+    location             = "centralindia"
+    resource_group_name  = "rg1"
+    nameipconfig         = "ipconfig-vm1"
+    virtual_network_name = "vnet1"
+    subnet-ka-data-block = "subnet1"
+  }
+  nic3 = {
+    name                 = "nic3"
+    location             = "centralindia"
+    resource_group_name  = "rg1"
+    nameipconfig         = "ipconfig-vm2"
+    virtual_network_name = "vnet1"
+    subnet-ka-data-block = "subnet1"
+  }
+}
 
+nsg = {
+  nsg1 = {
+    name                = "nsg1"
+    location            = "centralindia"
+    resource_group_name = "rg1"
+  }
+}
+
+nsg-nic-association = {
+  assoc1 = {
+    nic = "nic1"
+    nsg = "nsg1"
+  }
+}
+
+lb = {
+  lb1 = {
+    name                = "lb1"
+    location            = "centralindia"
+    resource_group_name = "rg1"
+    pip_name            = "pip1"
+    frontend_name       = "PublicIPAddress"
+  }
+}
+
+vm = {
+  vm1 = {
+    name                = "vm1"
+    location            = "centralindia"
+    resource_group_name = "rg1"
+    size                = "Standard_D2s_v3"
+    nic_key             = "nic2"
+    admin_username      = "adminuser"
+    admin_password      = "Password1234!"
+  }
+  vm2 = {
+    name                = "vm2"
+    location            = "centralindia"
+    resource_group_name = "rg1"
+    size                = "Standard_D2s_v3"
+    nic_key             = "nic3"
+    admin_username      = "adminuser"
+    admin_password      = "Password1234!"
+  }
+}
+
+nat = {
+  nat1 = {
+    name                 = "nat-gateway1"
+    location             = "centralindia"
+    resource_group_name  = "rg1"
+    virtual_network_name = "vnet1"
+    subnet_name          = "subnet1"
+  }
+}
+
+bastion = {
+  bastion1 = {
+    name                  = "bastion1"
+    location              = "centralindia"
+    resource_group_name   = "rg1"
+    virtual_network_name  = "vnet1"
+    bastion_subnet_prefix = ["10.0.1.0/26"]
+  }
+}
