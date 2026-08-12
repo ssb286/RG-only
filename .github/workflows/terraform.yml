@@ -9,7 +9,7 @@ on:
 
   workflow_dispatch:
 
-# Minimum permissions required
+# Minimum GitHub permissions required for OIDC
 permissions:
   id-token: write
   contents: read
@@ -42,7 +42,7 @@ jobs:
 
 
       # ============================================================
-      # 3. Terraform Setup
+      # 3. Setup Terraform
       # ============================================================
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -62,24 +62,14 @@ jobs:
 
 
       # ============================================================
-      # 5. Terraform Format Check
+      # 5. Terraform Format
       # ============================================================
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
 
 
       # ============================================================
-      # 6. Terraform Validation
-      # ============================================================
-      - name: Terraform Init
-        run: terraform init -input=false
-
-      - name: Terraform Validate
-        run: terraform validate
-
-
-      # ============================================================
-      # 7. Checkov IaC Security Scan
+      # 6. Checkov Security Scan
       # ============================================================
       - name: Checkov Terraform Security Scan
         uses: bridgecrewio/checkov-action@v12
@@ -91,7 +81,7 @@ jobs:
 
 
       # ============================================================
-      # 8. Trivy IaC Security Scan
+      # 7. Trivy IaC Security Scan
       # ============================================================
       - name: Trivy Terraform Security Scan
         uses: aquasecurity/trivy-action@v0.36.0
@@ -104,7 +94,7 @@ jobs:
 
 
       # ============================================================
-      # 9. Azure Login using OIDC
+      # 8. Azure Login using GitHub OIDC
       # ============================================================
       - name: Azure Login
         uses: azure/login@v2
@@ -115,7 +105,7 @@ jobs:
 
 
       # ============================================================
-      # 10. Verify Azure Login
+      # 9. Verify Azure Login
       # ============================================================
       - name: Check Azure Login
         run: |
@@ -123,7 +113,35 @@ jobs:
 
 
       # ============================================================
-      # 11. Terraform Plan
+      # 10. Configure Terraform Azure OIDC
+      # ============================================================
+      - name: Configure Terraform Azure OIDC
+        run: |
+          echo "ARM_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}" >> "$GITHUB_ENV"
+          echo "ARM_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> "$GITHUB_ENV"
+          echo "ARM_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}" >> "$GITHUB_ENV"
+          echo "ARM_USE_OIDC=true" >> "$GITHUB_ENV"
+
+
+      # ============================================================
+      # 11. Terraform Init
+      # ============================================================
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -input=false \
+            -backend-config="use_oidc=true"
+
+
+      # ============================================================
+      # 12. Terraform Validate
+      # ============================================================
+      - name: Terraform Validate
+        run: terraform validate
+
+
+      # ============================================================
+      # 13. Terraform Plan
       # ============================================================
       - name: Terraform Plan
         run: |
@@ -134,8 +152,9 @@ jobs:
 
 
       # ============================================================
-      # 12. Terraform Apply
-      # Only runs on main branch
+      # 14. Terraform Apply
+      # Only runs after push to main
+      # PRs will NEVER run apply
       # ============================================================
       - name: Terraform Apply
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
