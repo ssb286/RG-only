@@ -7,12 +7,16 @@ on:
 
   pull_request:
 
+  workflow_dispatch:
+
+# Minimum permissions required
 permissions:
   id-token: write
   contents: read
 
 jobs:
   terraform:
+    name: Terraform Security & Deployment
     runs-on: ubuntu-latest
 
     defaults:
@@ -20,11 +24,88 @@ jobs:
         working-directory: ./root
 
     steps:
-      # 1. Checkout Repository
+
+      # ============================================================
+      # 1. Checkout
+      # ============================================================
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      # 2. Azure Login using OIDC
+
+      # ============================================================
+      # 2. Secret Scan
+      # ============================================================
+      - name: Gitleaks Secret Scan
+        uses: gitleaks/gitleaks-action@v3
+
+
+      # ============================================================
+      # 3. Terraform Setup
+      # ============================================================
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+
+      # ============================================================
+      # 4. Check Terraform Files
+      # ============================================================
+      - name: Check Terraform Files
+        run: |
+          echo "Working directory:"
+          pwd
+
+          echo ""
+          echo "Terraform files:"
+          find . -name "*.tf" -type f
+
+
+      # ============================================================
+      # 5. Terraform Format Check
+      # ============================================================
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+
+      # ============================================================
+      # 6. Terraform Validation
+      # ============================================================
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      - name: Terraform Validate
+        run: terraform validate
+
+
+      # ============================================================
+      # 7. Checkov IaC Security Scan
+      # ============================================================
+      - name: Checkov Terraform Security Scan
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: ./root
+          framework: terraform
+          quiet: false
+          soft_fail: false
+
+
+      # ============================================================
+      # 8. Trivy IaC Security Scan
+      # ============================================================
+      - name: Trivy Terraform Security Scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: config
+          scan-ref: ./root
+          severity: HIGH,CRITICAL
+          exit-code: 1
+          ignore-unfixed: true
+
+
+      # ============================================================
+      # 9. Azure Login using OIDC
+      # ============================================================
       - name: Azure Login
         uses: azure/login@v2
         with:
@@ -32,33 +113,34 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # 3. Verify Azure Login
+
+      # ============================================================
+      # 10. Verify Azure Login
+      # ============================================================
       - name: Check Azure Login
-        run: az account show
-
-      # 4. Setup Terraform
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      # 5. Check Terraform Files
-      - name: Check Terraform Files
         run: |
-          pwd
-          echo "Terraform files:"
-          find . -name "*.tf" -type f
+          az account show
 
-      # 6. Terraform Format Check
-      - name: Terraform Format Check
-        run: terraform fmt -check -recursive
 
-      # 7. Terraform Init
-      - name: Terraform Init
-        run: terraform init
-
-      # 8. Terraform Validate
-      - name: Terraform Validate
-        run: terraform validate
-
-      # 9. Terraform Plan
+      # ============================================================
+      # 11. Terraform Plan
+      # ============================================================
       - name: Terraform Plan
-        run: terraform plan -no-color -out=tfplan
+        run: |
+          terraform plan \
+            -input=false \
+            -no-color \
+            -out=tfplan
+
+
+      # ============================================================
+      # 12. Terraform Apply
+      # Only runs on main branch
+      # ============================================================
+      - name: Terraform Apply
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          terraform apply \
+            -input=false \
+            -auto-approve \
+            tfplan
