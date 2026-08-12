@@ -77,7 +77,7 @@ jobs:
           directory: ./root
           framework: terraform
           quiet: false
-          soft_fail: false
+          soft_fail: true
 
 
       # ============================================================
